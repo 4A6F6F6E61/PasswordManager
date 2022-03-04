@@ -4,11 +4,24 @@ type Str = [Char]
 
 main :: IO ()
 main = do
-    putStrLn "What would you like to do?"
-    putStrLn "1. Add a new password"
-    putStrLn "2. View a password for a site"
-    putStrLn "3. View all passwords"
-    putStrLn "4. Exit"
+    --let pass = mkPassword "ejYrkGnzPqZM1!"
+    --passHash <- hashPassword pass
+    --print passHash
+    putStrLn "Enter your password"
+    password <- getLine
+    if password == "password"
+        then startupDialog
+        else putStrLn "Wrong password"
+
+startupDialog :: IO ()
+startupDialog = do
+    putStrLn "\
+        \What would you like to do?\n\
+        \1. Add a new password\n\
+        \2. View a password for a site\n\
+        \3. View all passwords\n\
+        \4. Exit\
+    \"
     choise <- getLine
     case choise of
         "1" -> addPassword
@@ -25,12 +38,16 @@ addPassword = do
     username <- getLine
     putStrLn "Enter the password"
     password <- getLine
-    print "--"
+    putStrLn "--"
     encryptAndSave site username password
 
 encryptAndSave :: Str -> Str -> Str -> IO ()
-encryptAndSave site username password = do
-    let encryptedPassword = password
-    let newPassword = site ++ ":" ++  username ++ ":" ++ encryptedPassword
-    appendFile "passwords" $ newPassword ++ "\n"
-    putStrLn "Password saved"
+encryptAndSave site username password =
+    do
+        appendFile "passwords.enc" $ newPassword ++ "\n"
+        putStrLn "Password saved"
+    where
+        encryptedPassword :: Str
+        encryptedPassword = password
+        newPassword :: Str
+        newPassword = site ++ ":" ++  username ++ ":" ++ encryptedPassword
