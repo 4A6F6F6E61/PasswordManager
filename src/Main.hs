@@ -1,12 +1,19 @@
 module Main where
 
+import Data.Password.BCrypt
+
 type Str = [Char]
+data Entry = Entry {
+  site :: Str,
+  username :: Str,
+  password :: Str
+} deriving (Show)
 
 main :: IO ()
 main = do
-    --let pass = mkPassword "ejYrkGnzPqZM1!"
-    --passHash <- hashPassword pass
-    --print passHash
+    let pass = mkPassword "foobar"
+    passHash <- hashPassword pass
+    checkPassword pass passHash
     putStrLn "Enter your password"
     password <- getLine
     if password == "password"
@@ -39,15 +46,19 @@ addPassword = do
     putStrLn "Enter the password"
     password <- getLine
     putStrLn "--"
-    encryptAndSave site username password
+    encryptAndSave Entry {
+        site = site,
+        username = username,
+        password = password
+    }
 
-encryptAndSave :: Str -> Str -> Str -> IO ()
-encryptAndSave site username password =
+encryptAndSave :: Entry -> IO ()
+encryptAndSave entry =
     do
-        appendFile "passwords.enc" $ newPassword ++ "\n"
+        appendFile "passwords.enc" $ encryptedEntry ++ "\n"
         putStrLn "Password saved"
     where
         encryptedPassword :: Str
-        encryptedPassword = password
-        newPassword :: Str
-        newPassword = site ++ ":" ++  username ++ ":" ++ encryptedPassword
+        encryptedPassword = password entry
+        encryptedEntry :: Str
+        encryptedEntry = site entry ++ ":" ++  username entry ++ ":" ++ encryptedPassword
