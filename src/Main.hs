@@ -1,24 +1,28 @@
 module Main where
 
-import Data.Password.BCrypt
+import Data.Password.Bcrypt
+import System.IO
+import Control.Exception
 
-type Str = [Char]
 data Entry = Entry {
-  site :: Str,
-  username :: Str,
-  password :: Str
+  site     :: String,
+  username :: String,
+  password :: String
 } deriving (Show)
 
 main :: IO ()
 main = do
-    let pass = mkPassword "foobar"
-    passHash <- hashPassword pass
-    checkPassword pass passHash
-    putStrLn "Enter your password"
-    password <- getLine
+    password <- pwprompt "Enter your password" ">"
     if password == "password"
         then startupDialog
         else putStrLn "Wrong password"
+
+
+--passwordtest =
+--    let pass = mkPassword "foobar"
+--    hashPassword pass
+--    print $ verifyPassword pass "foobar"
+    
 
 startupDialog :: IO ()
 startupDialog = do
@@ -31,7 +35,7 @@ startupDialog = do
     \"
     choise <- getLine
     case choise of
-        "1" -> addPassword
+        "1" -> addPassword'
         "2" -> putStrLn "2"
         "3" -> putStrLn "3"
         "4" -> putStrLn "exit"
@@ -40,10 +44,15 @@ startupDialog = do
 addPassword :: IO ()
 addPassword = do
     putStrLn "Enter the site name"
+    putStr "Site: "
+    hFlush stdout
     site <- getLine
+    putChar '\n'
     putStrLn "Enter the username"
+    putStr "Username: "
     username <- getLine
     putStrLn "Enter the password"
+    putStr "Password: "
     password <- getLine
     putStrLn "--"
     encryptAndSave Entry {
@@ -52,13 +61,43 @@ addPassword = do
         password = password
     }
 
+addPassword' :: IO ()
+addPassword' = do
+    site <- prompt "Enter the site name" "Site: "
+    username <- prompt "Enter the username" "Username: "
+    password <- pwprompt "Enter the password" "Password: "
+    encryptAndSave Entry {
+        site = site,
+        username = username,
+        password = password
+    }
+
+prompt :: String -> String -> IO String
+prompt head prompt = do
+    putStrLn head
+    putStr prompt
+    hFlush stdout
+    withEcho True getLine
+
+pwprompt :: String -> String  -> IO String
+pwprompt head prompt = do
+    putStrLn head
+    putStr prompt
+    hFlush stdout
+    withEcho False getLine
+
+withEcho :: Bool -> IO a -> IO a
+withEcho echo action = do
+  old <- hGetEcho stdin
+  bracket_ (hSetEcho stdin echo) (hSetEcho stdin old) action
+
 encryptAndSave :: Entry -> IO ()
 encryptAndSave entry =
     do
         appendFile "passwords.enc" $ encryptedEntry ++ "\n"
-        putStrLn "Password saved"
+        putStrLn "\nPassword saved"
     where
-        encryptedPassword :: Str
+        encryptedPassword :: String
         encryptedPassword = password entry
-        encryptedEntry :: Str
+        encryptedEntry :: String
         encryptedEntry = site entry ++ ":" ++  username entry ++ ":" ++ encryptedPassword
