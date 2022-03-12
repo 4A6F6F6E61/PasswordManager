@@ -1,8 +1,14 @@
 module Main where
 
 import Data.Password.Bcrypt
-import System.IO
-import Control.Exception
+    (checkPassword,
+      mkPassword,
+      PasswordCheck(PasswordCheckSuccess),
+      PasswordHash(PasswordHash, unPasswordHash)) 
+import System.IO (hFlush, hGetEcho, hSetEcho, stdin, stdout)
+import Control.Exception (bracket_)
+import Data.Text (pack)
+import Crypto.Hash (hash)
 
 data Entry = Entry {
   site     :: String,
@@ -12,28 +18,26 @@ data Entry = Entry {
 
 main :: IO ()
 main = do
-    password <- pwprompt "Enter your password" ">"
-    if password == "password"
+    key <- readFile "password.enc"
+    password <- pwprompt "Enter your password" "$ "
+    let pass = mkPassword $ pack password
+    let hash = PasswordHash {
+        unPasswordHash = pack key
+    }
+    if checkPassword pass hash == PasswordCheckSuccess
         then startupDialog
-        else putStrLn "Wrong password"
-
-
---passwordtest =
---    let pass = mkPassword "foobar"
---    hashPassword pass
---    print $ verifyPassword pass "foobar"
-    
+        else putStrLn "\nWrong password"
 
 startupDialog :: IO ()
 startupDialog = do
-    putStrLn "\
+    putChar '\n'
+    choise <- prompt "\
         \What would you like to do?\n\
         \1. Add a new password\n\
         \2. View a password for a site\n\
         \3. View all passwords\n\
         \4. Exit\
-    \"
-    choise <- getLine
+    \" "$ "
     case choise of
         "1" -> addPassword'
         "2" -> putStrLn "2"
@@ -92,10 +96,9 @@ withEcho echo action = do
   bracket_ (hSetEcho stdin echo) (hSetEcho stdin old) action
 
 encryptAndSave :: Entry -> IO ()
-encryptAndSave entry =
-    do
-        appendFile "passwords.enc" $ encryptedEntry ++ "\n"
-        putStrLn "\nPassword saved"
+encryptAndSave entry = do
+    appendFile "passwords.enc" $ encryptedEntry ++ "\n"
+    putStrLn "\nPassword saved"
     where
         encryptedPassword :: String
         encryptedPassword = password entry
