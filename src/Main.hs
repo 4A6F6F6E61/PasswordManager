@@ -1,14 +1,10 @@
 module Main where
 
 import Data.Password.Bcrypt
-    (checkPassword,
-      mkPassword,
-      PasswordCheck(PasswordCheckSuccess),
-      PasswordHash(PasswordHash, unPasswordHash)) 
-import System.IO (hFlush, hGetEcho, hSetEcho, stdin, stdout)
-import Control.Exception (bracket_)
-import Data.Text (pack)
-import Crypto.Hash (hash)
+import System.IO
+import Control.Exception
+import Data.Text
+import Crypto.Hash
 
 data Entry = Entry {
   site     :: String,
@@ -18,6 +14,7 @@ data Entry = Entry {
 
 main :: IO ()
 main = do
+    clear
     key <- readFile "password.enc"
     password <- pwprompt "Enter your password" "$ "
     let pass = mkPassword $ pack password
@@ -31,42 +28,26 @@ main = do
 startupDialog :: IO ()
 startupDialog = do
     putChar '\n'
+    clear
     choise <- prompt "\
         \What would you like to do?\n\
         \1. Add a new password\n\
-        \2. View a password for a site\n\
-        \3. View all passwords\n\
-        \4. Exit\
+        \2. Change main password\n\
+        \3. View a password for a site\n\
+        \4. View all passwords\n\
+        \5. Exit\n\
     \" "$ "
     case choise of
-        "1" -> addPassword'
-        "2" -> putStrLn "2"
+        "1" -> addPassword
+        "2" -> changeMainPassword
         "3" -> putStrLn "3"
-        "4" -> putStrLn "exit"
+        "4" -> putStrLn "4"
+        "5" -> putStrLn "exit"
         _   -> putStrLn "Invalid input"
 
 addPassword :: IO ()
 addPassword = do
-    putStrLn "Enter the site name"
-    putStr "Site: "
-    hFlush stdout
-    site <- getLine
-    putChar '\n'
-    putStrLn "Enter the username"
-    putStr "Username: "
-    username <- getLine
-    putStrLn "Enter the password"
-    putStr "Password: "
-    password <- getLine
-    putStrLn "--"
-    encryptAndSave Entry {
-        site = site,
-        username = username,
-        password = password
-    }
-
-addPassword' :: IO ()
-addPassword' = do
+    clear
     site <- prompt "Enter the site name" "Site: "
     username <- prompt "Enter the username" "Username: "
     password <- pwprompt "Enter the password" "Password: "
@@ -92,8 +73,8 @@ pwprompt head prompt = do
 
 withEcho :: Bool -> IO a -> IO a
 withEcho echo action = do
-  old <- hGetEcho stdin
-  bracket_ (hSetEcho stdin echo) (hSetEcho stdin old) action
+    old <- hGetEcho stdin
+    bracket_ (hSetEcho stdin echo) (hSetEcho stdin old) action
 
 encryptAndSave :: Entry -> IO ()
 encryptAndSave entry = do
@@ -104,3 +85,48 @@ encryptAndSave entry = do
         encryptedPassword = password entry
         encryptedEntry :: String
         encryptedEntry = site entry ++ ":" ++  username entry ++ ":" ++ encryptedPassword
+
+changeMainPassword :: IO ()
+changeMainPassword = do
+    clear
+    choice <- prompt "\
+        \Are you Sure you want to change the password?\n\
+        \ALL CURRENTLY SAVED LOGINS WILL BE REMOVED\n\
+        \\n\
+        \1. Yes\n\
+        \2. No\
+    \" "$ "
+    handle choice
+    where
+        handle :: String -> IO ()
+        handle choice
+            | choice == "1" = do
+                clear
+                newPass <- pwprompt "Enter new password: " "$ "
+                clear
+                confirm <- pwprompt "\nConfirm new password: " "$ "
+                if newPass == confirm
+                    then do
+                        let pass = mkPassword $ pack newPass
+                        passHash <- hashPassword pass
+                        writeFile "password.enc" $ unpack $ unPasswordHash passHash
+                        print $ unPasswordHash passHash
+                        clear
+                        putStrLn "Password changed"
+                    else do
+                        clear
+                        putStrLn "Passwords do not match"
+                clear
+                main
+            | choice == "2" = do
+                clear
+                main
+            | otherwise     = do 
+                clear
+                main
+
+removePar :: Text -> Text
+removePar = Data.Text.dropWhile (=='\"') . dropWhileEnd (=='\"')
+
+clear :: IO ()
+clear = putStr "\ESC[2J"
