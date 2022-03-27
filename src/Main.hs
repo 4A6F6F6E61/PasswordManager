@@ -15,6 +15,10 @@ data Entry = Entry {
 main :: IO ()
 main = do
     clear
+    main2
+
+main2 :: IO ()
+main2 = do
     key <- readFile "password.enc"
     password <- pwprompt "Enter your password" "$ "
     let pass = mkPassword $ pack password
@@ -23,7 +27,10 @@ main = do
     }
     if checkPassword pass hash == PasswordCheckSuccess
         then startupDialog
-        else putStrLn "\nWrong password"
+        else do
+            clear
+            putStrLn "\nWrong password"
+            main2
 
 startupDialog :: IO ()
 startupDialog = do
