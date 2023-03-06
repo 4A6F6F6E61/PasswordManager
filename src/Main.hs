@@ -87,6 +87,7 @@ encryptAndSave :: Entry -> IO ()
 encryptAndSave entry = do
     appendFile "passwords.enc" $ encryptedEntry ++ "\n"
     putStrLn "\nPassword saved"
+    main2
     where
         encryptedPassword :: String
         encryptedPassword = password entry
